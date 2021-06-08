@@ -1,17 +1,15 @@
-name: setting up environment
+name: Telegram userbot
 
 on:
   push:
-    branches: [ main ]
-    paths-ignore: 'README.md'
   workflow_dispatch:
     
 env:
-  GitHubMail: "iam.pro2@outlook.com"
-  GitHubName: "ProgrammingError" 
+  GitHubMail: "${{ secrets.GHMAIL }}"
+  GitHubName: "rahulkhatri137" 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     steps:
        - name: Checkout
@@ -19,28 +17,29 @@ jobs:
 
        - name: Set Git Configs & Secrets
          run: |
-           git config --global user.email ${GitHubMail}
-           git config --global user.name ${GitHubName}
-           git config --global credential.helper store
-           echo "https://${GitHubName}:${{ secrets.GH_TOKEN }}@github.com" > ~/.git-credentials
+           git config --global user.email "${GitHubMail}"
+           git config --global user.name "${GitHubName}"
+           sudo apt install expect -y
 
        - name: cloning repo
          continue-on-error: false
          run: |
-           git clone https://${GitHubName}:${{ secrets.GH_TOKEN }}@github.com/${{ secrets.CREDS }} userge
-       - name: Running Userge
+           expect -c " 
+           spawn git clone https://github.com/rahulkhatri137/ultroi bot
+           expect \"Username\"        
+           send \"${{ secrets.GHUSER }}\r\"
+           expect \"Password\"        
+           send \"${{ secrets.GHPASS }}\r\"
+           set timeout -5
+           catch wait result
+           interact"
+       - name: Running Bot
          timeout-minutes: 350
          continue-on-error: true
          run: |
-           cd userge
-           docker-compose up -d
-           docker-compose logs -f
-       - name: Loop workflow
-         continue-on-error: true
-         run: |
-           git clone https://${{ secrets.GH_TOKEN }}@github.com/${GITHUB_REPOSITORY} loop
-           cd loop || exit 1
-           echo $(( RANDOM - ( RANDOM % RANDOM ) )) > looper.txt
-           git add looper.txt
-           git commit -m "Workflow : Loop at $(date -u +%D-%T%P)"
-           git push -q https://${{ secrets.GH_TOKEN }}@github.com/${GITHUB_REPOSITORY} HEAD:main
+           cd bot
+           echo "${{ secrets.DPASS }}" | docker login -u rahulkhatri137 --password-stdin
+           docker container prune --force || true
+           docker build . --rm --force-rm --compress --no-cache=true --pull --file Dockerfile -t ubot
+           docker image ls
+           docker run --privileged --rm -i ubot
